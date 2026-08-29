@@ -1,3 +1,4 @@
+pub mod memory;
 pub mod parser;
 use std::{env, error::Error, fs};
 
@@ -27,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let bytecode = assemble(&program);
 
     let mut vm = VirtualMachine::new(memory_size as usize);
-    vm.load_program(&bytecode, 0)?;
+    vm.memory.load_program(&bytecode, 0)?;
     vm.run()?;
     vm.print_state();
 
