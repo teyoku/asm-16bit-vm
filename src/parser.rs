@@ -15,6 +15,48 @@ pub fn parse_u16(s: &str) -> Result<u16, AssemblerError> {
         .map_err(|_| AssemblerError::ParseIntError(s.to_string()))
 }
 
+fn parse_reg_and_u16(data: &[&str]) -> Result<(Register, u16), AssemblerError> {
+    let reg_str = data.get(1).ok_or(AssemblerError::MissingArgument(
+        "Expected register".to_string(),
+    ))?;
+    let reg = parse_register(reg_str)?;
+
+    let value_str = data.get(2).ok_or(AssemblerError::MissingArgument(
+        "Expected value".to_string(),
+    ))?;
+    let value = parse_u16(value_str)?;
+
+    Ok((reg, value))
+}
+
+fn parse_two_regs(data: &[&str]) -> Result<(Register, Register), AssemblerError> {
+    let reg1_str = data.get(1).ok_or(AssemblerError::MissingArgument(
+        "Expected register".to_string(),
+    ))?;
+    let reg1 = parse_register(reg1_str)?;
+
+    let reg2_str = data.get(2).ok_or(AssemblerError::MissingArgument(
+        "Expected register".to_string(),
+    ))?;
+    let reg2 = parse_register(reg2_str)?;
+
+    Ok((reg1, reg2))
+}
+
+fn parse_single_u16(data: &[&str]) -> Result<u16, AssemblerError> {
+    let address = data.get(1).ok_or(AssemblerError::MissingArgument(
+        "Expected address".to_string(),
+    ))?;
+    parse_u16(address)
+}
+
+fn parse_single_reg(data: &[&str]) -> Result<Register, AssemblerError> {
+    let reg_str = data.get(1).ok_or(AssemblerError::MissingArgument(
+        "Expected register".to_string(),
+    ))?;
+    parse_register(reg_str)
+}
+
 pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
     let mut program = Vec::new();
 
@@ -27,95 +69,48 @@ pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
         match data[0] {
             "HALT" => program.push(Instruction::Halt),
             "SET" => {
-                let reg_str = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected register".to_string(),
-                ))?;
-                let reg = parse_register(reg_str)?;
-                let value_str = data.get(2).ok_or(AssemblerError::MissingArgument(
-                    "Expected value".to_string(),
-                ))?;
-                let value = parse_u16(value_str)?;
+                let (reg, value) = parse_reg_and_u16(&data)?;
                 program.push(Instruction::Set(reg, value));
             }
             "LOAD" => {
-                let reg_str = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected register".to_string(),
-                ))?;
-                let reg = parse_register(reg_str)?;
-                let address_str = data.get(2).ok_or(AssemblerError::MissingArgument(
-                    "Expected address".to_string(),
-                ))?;
-                let address = parse_u16(address_str)?;
+                let (reg, address) = parse_reg_and_u16(&data)?;
                 program.push(Instruction::Load(reg, address));
             }
             "STORE" => {
-                let reg_str = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected register".to_string(),
-                ))?;
-                let reg = parse_register(reg_str)?;
-                let address_str = data.get(2).ok_or(AssemblerError::MissingArgument(
-                    "Expected address".to_string(),
-                ))?;
-                let address = parse_u16(address_str)?;
+                let (reg, address) = parse_reg_and_u16(&data)?;
                 program.push(Instruction::Store(reg, address));
             }
             "ADD" => {
-                let reg1_str = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected register".to_string(),
-                ))?;
-                let reg1 = parse_register(reg1_str)?;
-                let reg2_str = data.get(2).ok_or(AssemblerError::MissingArgument(
-                    "Expected register".to_string(),
-                ))?;
-                let reg2 = parse_register(reg2_str)?;
+                let (reg1, reg2) = parse_two_regs(&data)?;
                 program.push(Instruction::Add(reg1, reg2));
             }
             "SUB" => {
-                let reg1_str = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected register".to_string(),
-                ))?;
-                let reg1 = parse_register(reg1_str)?;
-                let reg2_str = data.get(2).ok_or(AssemblerError::MissingArgument(
-                    "Expected register".to_string(),
-                ))?;
-                let reg2 = parse_register(reg2_str)?;
+                let (reg1, reg2) = parse_two_regs(&data)?;
                 program.push(Instruction::Sub(reg1, reg2));
             }
             "JMP" => {
-                let address = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected address".to_string(),
-                ))?;
-                program.push(Instruction::Jmp(parse_u16(address)?));
+                let address = parse_single_u16(&data)?;
+                program.push(Instruction::Jmp(address));
             }
             "JEQ" => {
-                let address = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected address".to_string(),
-                ))?;
-                program.push(Instruction::Jeq(parse_u16(address)?));
+                let address = parse_single_u16(&data)?;
+                program.push(Instruction::Jeq(address));
             }
             "JNE" => {
-                let address = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected address".to_string(),
-                ))?;
-                program.push(Instruction::Jne(parse_u16(address)?));
+                let address = parse_single_u16(&data)?;
+                program.push(Instruction::Jne(address));
             }
             "PUSH" => {
-                let reg = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected register".to_string(),
-                ))?;
-                program.push(Instruction::Push(parse_register(reg)?));
+                let reg = parse_single_reg(&data)?;
+                program.push(Instruction::Push(reg));
             }
             "POP" => {
-                let reg = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected register".to_string(),
-                ))?;
-                program.push(Instruction::Pop(parse_register(reg)?));
+                let reg = parse_single_reg(&data)?;
+                program.push(Instruction::Pop(reg));
             }
             "CALL" => {
-                let address = data.get(1).ok_or(AssemblerError::MissingArgument(
-                    "Expected address".to_string(),
-                ))?;
-                program.push(Instruction::Call(parse_u16(address)?));
+                let address = parse_single_u16(&data)?;
+                program.push(Instruction::Call(address));
             }
             "RET" => program.push(Instruction::Ret),
             instruction => return Err(AssemblerError::UnknownInstruction(instruction.to_string())),
