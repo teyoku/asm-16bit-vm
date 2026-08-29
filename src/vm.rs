@@ -1,8 +1,8 @@
-use crate::{error::RuntimeError, instruction::Instruction, register::Register};
+use crate::{error::RuntimeError, instruction::Instruction, memory::Memory, register::Register};
 
 pub struct VirtualMachine {
     registers: [u16; 4],
-    memory: Vec<u16>,
+    pub memory: Memory,
     pc: u16, // program counter
     sp: u16, // stack pointer
     zero_flag: bool,
@@ -13,7 +13,7 @@ impl VirtualMachine {
     pub fn new(memory_size: usize) -> Self {
         Self {
             registers: [0, 0, 0, 0],
-            memory: vec![0; memory_size],
+            memory: Memory::new(memory_size),
             pc: 0,
             sp: memory_size as u16,
             zero_flag: false,
@@ -28,20 +28,12 @@ impl VirtualMachine {
                 self.registers[register.as_index()] = value;
             }
             Instruction::Load(register, address) => {
-                if address as usize >= self.memory.len() {
-                    return Err(RuntimeError::MemoryOutOfBounds(address as usize));
-                }
-
-                let value = self.memory[address as usize];
+                let value = self.memory.read(address)?;
                 self.registers[register.as_index()] = value;
             }
             Instruction::Store(register, address) => {
-                if address as usize >= self.memory.len() {
-                    return Err(RuntimeError::MemoryOutOfBounds(address as usize));
-                }
-
                 let value = self.registers[register.as_index()];
-                self.memory[address as usize] = value;
+                self.memory.write(address, value)?;
             }
             Instruction::Add(register1, register2) => {
                 let value = self.registers[register1.as_index()]
@@ -72,14 +64,11 @@ impl VirtualMachine {
                 }
 
                 self.sp -= 1;
-                self.memory[self.sp as usize] = self.registers[register.as_index()];
+                let value = self.registers[register.as_index()];
+                self.memory.write(self.sp, value)?;
             }
             Instruction::Pop(register) => {
-                if self.sp as usize >= self.memory.len() {
-                    return Err(RuntimeError::StackUnderflow);
-                }
-
-                self.registers[register.as_index()] = self.memory[self.sp as usize];
+                self.registers[register.as_index()] = self.memory.read(self.sp)?;
                 self.sp += 1;
             }
             Instruction::Call(address) => {
@@ -88,34 +77,15 @@ impl VirtualMachine {
                 }
 
                 self.sp -= 1;
-                self.memory[self.sp as usize] = self.pc;
+                self.memory.write(self.sp, self.pc)?;
                 self.pc = address;
             }
             Instruction::Ret => {
-                if self.sp as usize >= self.memory.len() {
-                    return Err(RuntimeError::StackUnderflow);
-                }
-
-                let ret_addr = self.memory[self.sp as usize];
+                let ret_addr = self.memory.read(self.sp)?;
                 self.pc = ret_addr;
                 self.sp += 1;
             }
         }
-
-        Ok(())
-    }
-
-    pub fn load_program(&mut self, bytecode: &[u16], offset: usize) -> Result<(), RuntimeError> {
-        if offset >= self.memory.len() {
-            return Err(RuntimeError::MemoryOutOfBounds(offset));
-        }
-
-        let end = offset + bytecode.len();
-        if end > self.memory.len() {
-            return Err(RuntimeError::MemoryOutOfBounds(end));
-        }
-
-        self.memory[offset..end].copy_from_slice(bytecode);
 
         Ok(())
     }
@@ -129,11 +99,7 @@ impl VirtualMachine {
     }
 
     fn next_word(&mut self) -> Result<u16, RuntimeError> {
-        let word = *self
-            .memory
-            .get(self.pc as usize)
-            .ok_or(RuntimeError::MemoryOutOfBounds(self.pc as usize))?;
-
+        let word = self.memory.read(self.pc)?;
         self.pc += 1;
         Ok(word)
     }
@@ -200,7 +166,7 @@ mod tests {
     fn test_load_instruction() {
         let mut vm = VirtualMachine::new(1024);
         // inserting 1234 into memory index '200'
-        vm.memory[200] = 1234;
+        vm.memory.write(200, 1234).unwrap();
         // inserting 1234 from memory index '200' to 'R2' register
         vm.execute_instruction(Instruction::Load(Register::R2, 200))
             .unwrap();
@@ -218,7 +184,7 @@ mod tests {
         vm.execute_instruction(Instruction::Store(Register::R1, 12))
             .unwrap();
 
-        assert_eq!(vm.memory[12], 2574);
+        assert_eq!(vm.memory.read(12).unwrap(), 2574);
     }
 
     #[test]
@@ -334,7 +300,7 @@ mod tests {
 
         let bytecode: Vec<u16> = vec![0xB000, 0x0004, 0x0000, 0x0000, 0x1000, 0x002A, 0xC000];
 
-        vm.load_program(&bytecode, 0).unwrap();
+        vm.memory.load_program(&bytecode, 0).unwrap();
         vm.run().unwrap();
 
         assert!(!vm.is_running);
@@ -351,7 +317,7 @@ mod tests {
         let bytecode = assemble(&program);
 
         let mut vm = VirtualMachine::new(1024);
-        vm.load_program(&bytecode, 0).unwrap();
+        vm.memory.load_program(&bytecode, 0).unwrap();
         vm.run().unwrap();
 
         assert_eq!(vm.registers[0], 5);
