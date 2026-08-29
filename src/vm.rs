@@ -105,6 +105,14 @@ impl VirtualMachine {
         Ok(())
     }
 
+    pub fn run(&mut self, program: &[u16]) -> Result<(), RuntimeError> {
+        while self.is_running {
+            let instruction = self.fetch_and_decode(program)?;
+            self.execute_instruction(instruction)?;
+        }
+        Ok(())
+    }
+
     fn next_word(&mut self, program: &[u16]) -> Result<u16, RuntimeError> {
         let word = *program
             .get(self.pc as usize)
@@ -112,14 +120,6 @@ impl VirtualMachine {
 
         self.pc += 1;
         Ok(word)
-    }
-
-    pub fn run(&mut self, program: &[u16]) -> Result<(), RuntimeError> {
-        while self.is_running {
-            let instruction = self.fetch_and_decode(program)?;
-            self.execute_instruction(instruction)?;
-        }
-        Ok(())
     }
 
     pub fn fetch_and_decode(&mut self, program: &[u16]) -> Result<Instruction, RuntimeError> {
