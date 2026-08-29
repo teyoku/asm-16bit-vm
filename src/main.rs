@@ -27,7 +27,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let bytecode = assemble(&program);
 
     let mut vm = VirtualMachine::new(memory_size as usize);
-    vm.run(&bytecode)?;
+    vm.load_program(&bytecode, 0)?;
+    vm.run()?;
     vm.print_state();
 
     Ok(())

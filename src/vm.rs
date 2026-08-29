@@ -105,16 +105,32 @@ impl VirtualMachine {
         Ok(())
     }
 
-    pub fn run(&mut self, program: &[u16]) -> Result<(), RuntimeError> {
+    pub fn load_program(&mut self, bytecode: &[u16], offset: usize) -> Result<(), RuntimeError> {
+        if offset >= self.memory.len() {
+            return Err(RuntimeError::MemoryOutOfBounds(offset));
+        }
+
+        let end = offset + bytecode.len();
+        if end > self.memory.len() {
+            return Err(RuntimeError::MemoryOutOfBounds(end));
+        }
+
+        self.memory[offset..end].copy_from_slice(bytecode);
+
+        Ok(())
+    }
+
+    pub fn run(&mut self) -> Result<(), RuntimeError> {
         while self.is_running {
-            let instruction = self.fetch_and_decode(program)?;
+            let instruction = self.fetch_and_decode()?;
             self.execute_instruction(instruction)?;
         }
         Ok(())
     }
 
-    fn next_word(&mut self, program: &[u16]) -> Result<u16, RuntimeError> {
-        let word = *program
+    fn next_word(&mut self) -> Result<u16, RuntimeError> {
+        let word = *self
+            .memory
             .get(self.pc as usize)
             .ok_or(RuntimeError::MemoryOutOfBounds(self.pc as usize))?;
 
@@ -122,8 +138,8 @@ impl VirtualMachine {
         Ok(word)
     }
 
-    pub fn fetch_and_decode(&mut self, program: &[u16]) -> Result<Instruction, RuntimeError> {
-        let instruction_word = self.next_word(program)?;
+    pub fn fetch_and_decode(&mut self) -> Result<Instruction, RuntimeError> {
+        let instruction_word = self.next_word()?;
         let opcode = (instruction_word >> 12) & 0x000F;
 
         let extract_reg = |shift| {
@@ -133,23 +149,17 @@ impl VirtualMachine {
 
         match opcode {
             0 => Ok(Instruction::Halt),
-            1 => Ok(Instruction::Set(extract_reg(10)?, self.next_word(program)?)),
-            2 => Ok(Instruction::Load(
-                extract_reg(10)?,
-                self.next_word(program)?,
-            )),
-            3 => Ok(Instruction::Store(
-                extract_reg(10)?,
-                self.next_word(program)?,
-            )),
+            1 => Ok(Instruction::Set(extract_reg(10)?, self.next_word()?)),
+            2 => Ok(Instruction::Load(extract_reg(10)?, self.next_word()?)),
+            3 => Ok(Instruction::Store(extract_reg(10)?, self.next_word()?)),
             4 => Ok(Instruction::Add(extract_reg(10)?, extract_reg(8)?)),
             5 => Ok(Instruction::Sub(extract_reg(10)?, extract_reg(8)?)),
-            6 => Ok(Instruction::Jmp(self.next_word(program)?)),
-            7 => Ok(Instruction::Jeq(self.next_word(program)?)),
-            8 => Ok(Instruction::Jne(self.next_word(program)?)),
+            6 => Ok(Instruction::Jmp(self.next_word()?)),
+            7 => Ok(Instruction::Jeq(self.next_word()?)),
+            8 => Ok(Instruction::Jne(self.next_word()?)),
             9 => Ok(Instruction::Push(extract_reg(10)?)),
             10 => Ok(Instruction::Pop(extract_reg(10)?)),
-            11 => Ok(Instruction::Call(self.next_word(program)?)),
+            11 => Ok(Instruction::Call(self.next_word()?)),
             12 => Ok(Instruction::Ret),
             _ => Err(RuntimeError::InvalidOpcode(instruction_word)),
         }
@@ -322,9 +332,10 @@ mod tests {
     fn test_call_ret() {
         let mut vm = VirtualMachine::new(1024);
 
-        let program: Vec<u16> = vec![0xB000, 0x0004, 0x0000, 0x0000, 0x1000, 0x002A, 0xC000];
+        let bytecode: Vec<u16> = vec![0xB000, 0x0004, 0x0000, 0x0000, 0x1000, 0x002A, 0xC000];
 
-        vm.run(&program).unwrap();
+        vm.load_program(&bytecode, 0).unwrap();
+        vm.run().unwrap();
 
         assert!(!vm.is_running);
         assert_eq!(vm.registers[0], 42);
@@ -340,7 +351,8 @@ mod tests {
         let bytecode = assemble(&program);
 
         let mut vm = VirtualMachine::new(1024);
-        vm.run(&bytecode).unwrap();
+        vm.load_program(&bytecode, 0).unwrap();
+        vm.run().unwrap();
 
         assert_eq!(vm.registers[0], 5);
 
