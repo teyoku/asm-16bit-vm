@@ -138,7 +138,7 @@ impl VirtualMachine {
         Ok(word)
     }
 
-    pub fn fetch_and_decode(&mut self) -> Result<Instruction, RuntimeError> {
+    fn fetch_and_decode(&mut self) -> Result<Instruction, RuntimeError> {
         let instruction_word = self.next_word()?;
         let opcode = (instruction_word >> 12) & 0x000F;
 
