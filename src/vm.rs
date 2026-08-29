@@ -1,4 +1,9 @@
-use crate::{error::RuntimeError, instruction::Instruction, memory::Memory, register::Register};
+use crate::{
+    error::RuntimeError,
+    instruction::{Instruction, Opcode},
+    memory::Memory,
+    register::Register,
+};
 
 pub struct VirtualMachine {
     registers: [u16; 4],
@@ -106,7 +111,9 @@ impl VirtualMachine {
 
     fn fetch_and_decode(&mut self) -> Result<Instruction, RuntimeError> {
         let instruction_word = self.next_word()?;
-        let opcode = (instruction_word >> 12) & 0x000F;
+        let opcode_value = (instruction_word >> 12) & 0x000F;
+
+        let opcode: Opcode = opcode_value.try_into()?;
 
         let extract_reg = |shift| {
             Register::from_u16((instruction_word >> shift) & 0x0003u16)
@@ -114,20 +121,19 @@ impl VirtualMachine {
         };
 
         match opcode {
-            0 => Ok(Instruction::Halt),
-            1 => Ok(Instruction::Set(extract_reg(10)?, self.next_word()?)),
-            2 => Ok(Instruction::Load(extract_reg(10)?, self.next_word()?)),
-            3 => Ok(Instruction::Store(extract_reg(10)?, self.next_word()?)),
-            4 => Ok(Instruction::Add(extract_reg(10)?, extract_reg(8)?)),
-            5 => Ok(Instruction::Sub(extract_reg(10)?, extract_reg(8)?)),
-            6 => Ok(Instruction::Jmp(self.next_word()?)),
-            7 => Ok(Instruction::Jeq(self.next_word()?)),
-            8 => Ok(Instruction::Jne(self.next_word()?)),
-            9 => Ok(Instruction::Push(extract_reg(10)?)),
-            10 => Ok(Instruction::Pop(extract_reg(10)?)),
-            11 => Ok(Instruction::Call(self.next_word()?)),
-            12 => Ok(Instruction::Ret),
-            _ => Err(RuntimeError::InvalidOpcode(instruction_word)),
+            Opcode::Halt => Ok(Instruction::Halt),
+            Opcode::Set => Ok(Instruction::Set(extract_reg(10)?, self.next_word()?)),
+            Opcode::Load => Ok(Instruction::Load(extract_reg(10)?, self.next_word()?)),
+            Opcode::Store => Ok(Instruction::Store(extract_reg(10)?, self.next_word()?)),
+            Opcode::Add => Ok(Instruction::Add(extract_reg(10)?, extract_reg(8)?)),
+            Opcode::Sub => Ok(Instruction::Sub(extract_reg(10)?, extract_reg(8)?)),
+            Opcode::Jmp => Ok(Instruction::Jmp(self.next_word()?)),
+            Opcode::Jeq => Ok(Instruction::Jeq(self.next_word()?)),
+            Opcode::Jne => Ok(Instruction::Jne(self.next_word()?)),
+            Opcode::Push => Ok(Instruction::Push(extract_reg(10)?)),
+            Opcode::Pop => Ok(Instruction::Pop(extract_reg(10)?)),
+            Opcode::Call => Ok(Instruction::Call(self.next_word()?)),
+            Opcode::Ret => Ok(Instruction::Ret),
         }
     }
 
