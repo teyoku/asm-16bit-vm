@@ -15,6 +15,10 @@ pub enum Instruction {
     Pop(Register),
     Call(u16),
     Ret,
+    And(Register, Register),
+    Or(Register, Register),
+    Xor(Register, Register),
+    Not(Register),
 }
 
 impl Instruction {
@@ -68,6 +72,30 @@ impl Instruction {
                 bytecode.push(*address);
             }
             Instruction::Ret => bytecode.push((Opcode::Ret as u16) << 12),
+            Instruction::And(register1, register2) => {
+                bytecode.push(
+                    (Opcode::And as u16) << 12
+                        | ((register1.as_index() as u16) << 10)
+                        | ((register2.as_index() as u16) << 8),
+                );
+            }
+            Instruction::Or(register1, register2) => {
+                bytecode.push(
+                    (Opcode::Or as u16) << 12
+                        | ((register1.as_index() as u16) << 10)
+                        | ((register2.as_index() as u16) << 8),
+                );
+            }
+            Instruction::Xor(register1, register2) => {
+                bytecode.push(
+                    (Opcode::Xor as u16) << 12
+                        | ((register1.as_index() as u16) << 10)
+                        | ((register2.as_index() as u16) << 8),
+                );
+            }
+            Instruction::Not(register) => {
+                bytecode.push((Opcode::Not as u16) << 12 | ((register.as_index() as u16) << 10));
+            }
         }
 
         bytecode
@@ -90,6 +118,10 @@ pub enum Opcode {
     Pop = 10,
     Call = 11,
     Ret = 12,
+    And = 13,
+    Or = 14,
+    Xor = 15,
+    Not = 16,
 }
 
 impl TryFrom<u16> for Opcode {
@@ -110,6 +142,10 @@ impl TryFrom<u16> for Opcode {
             10 => Ok(Opcode::Pop),
             11 => Ok(Opcode::Call),
             12 => Ok(Opcode::Ret),
+            13 => Ok(Opcode::And),
+            14 => Ok(Opcode::Or),
+            15 => Ok(Opcode::Xor),
+            16 => Ok(Opcode::Not),
             _ => Err(RuntimeError::InvalidOpcode(value)),
         }
     }
