@@ -1,6 +1,6 @@
 use std::{env, error::Error, fs};
 
-use crate::{assembler::assemble, parser::parse, vm::VirtualMachine};
+use crate::{assembler::assemble, parser::Parser, vm::VirtualMachine};
 
 pub mod assembler;
 pub mod error;
@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let memory_size = &args[1].parse::<u16>()?;
     let code = fs::read_to_string(&args[2])?;
 
-    let program = parse(&code)?;
+    let program = Parser::new().parse(&code)?;
     let bytecode = assemble(&program);
 
     let mut vm = VirtualMachine::new(*memory_size as usize);
