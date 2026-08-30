@@ -65,11 +65,7 @@ pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
 
     for line in code.lines() {
         // Handling comments
-        let fixed_line = if let Some((part, _)) = line.split_once(';') {
-            part
-        } else {
-            line
-        };
+        let fixed_line = line.split_once(';').map_or(line, |(code, _)| code);
 
         let data: Vec<&str> = fixed_line.split_whitespace().collect();
         if data.is_empty() {
@@ -97,11 +93,7 @@ pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
 
     for line in code.lines() {
         // Handling comments
-        let fixed_line = if let Some((part, _)) = line.split_once(';') {
-            part
-        } else {
-            line
-        };
+        let fixed_line = line.split_once(';').map_or(line, |(code, _)| code);
 
         let data: Vec<&str> = fixed_line.split_whitespace().collect();
         if data.is_empty() {
