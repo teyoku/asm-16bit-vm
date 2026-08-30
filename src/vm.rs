@@ -1,5 +1,6 @@
 use crate::{
     error::RuntimeError,
+    flags::Flags,
     instruction::{Instruction, Opcode},
     memory::Memory,
     register::Register,
@@ -10,7 +11,7 @@ pub struct VirtualMachine {
     pub memory: Memory,
     pc: u16, // program counter
     sp: u16, // stack pointer
-    zero_flag: bool,
+    flags: Flags,
     is_running: bool,
 }
 
@@ -21,7 +22,7 @@ impl VirtualMachine {
             memory: Memory::new(memory_size),
             pc: 0,
             sp: memory_size as u16,
-            zero_flag: false,
+            flags: Flags::default(),
             is_running: true,
         }
     }
@@ -41,25 +42,32 @@ impl VirtualMachine {
                 self.memory.write(address, value)?;
             }
             Instruction::Add(register1, register2) => {
-                let value = self.registers[register1.as_index()]
-                    .wrapping_add(self.registers[register2.as_index()]);
+                let (value, overflowed) = self.registers[register1.as_index()]
+                    .overflowing_add(self.registers[register2.as_index()]);
+
                 self.registers[register1.as_index()] = value;
-                self.zero_flag = value == 0;
+
+                self.flags.zero = value == 0;
+                self.flags.negative = (value >> 15) == 1;
+                self.flags.overflow = overflowed;
             }
             Instruction::Sub(register1, register2) => {
-                let value = self.registers[register1.as_index()]
-                    .wrapping_sub(self.registers[register2.as_index()]);
+                let (value, overflowed) = self.registers[register1.as_index()]
+                    .overflowing_sub(self.registers[register2.as_index()]);
                 self.registers[register1.as_index()] = value;
-                self.zero_flag = value == 0;
+
+                self.flags.zero = value == 0;
+                self.flags.negative = (value >> 15) == 1;
+                self.flags.overflow = overflowed;
             }
             Instruction::Jmp(address) => self.pc = address,
             Instruction::Jeq(address) => {
-                if self.zero_flag {
+                if self.flags.zero {
                     self.pc = address
                 }
             }
             Instruction::Jne(address) => {
-                if !self.zero_flag {
+                if !self.flags.zero {
                     self.pc = address
                 }
             }
@@ -94,24 +102,36 @@ impl VirtualMachine {
                 let value =
                     self.registers[register1.as_index()] & self.registers[register2.as_index()];
                 self.registers[register1.as_index()] = value;
-                self.zero_flag = value == 0
+
+                self.flags.zero = value == 0;
+                self.flags.negative = (value >> 15) == 1;
+                self.flags.overflow = false;
             }
             Instruction::Or(register1, register2) => {
                 let value =
                     self.registers[register1.as_index()] | self.registers[register2.as_index()];
                 self.registers[register1.as_index()] = value;
-                self.zero_flag = value == 0
+
+                self.flags.zero = value == 0;
+                self.flags.negative = (value >> 15) == 1;
+                self.flags.overflow = false;
             }
             Instruction::Xor(register1, register2) => {
                 let value =
                     self.registers[register1.as_index()] ^ self.registers[register2.as_index()];
                 self.registers[register1.as_index()] = value;
-                self.zero_flag = value == 0
+
+                self.flags.zero = value == 0;
+                self.flags.negative = (value >> 15) == 1;
+                self.flags.overflow = false;
             }
             Instruction::Not(register) => {
                 let value = !self.registers[register.as_index()];
                 self.registers[register.as_index()] = value;
-                self.zero_flag = value == 0
+
+                self.flags.zero = value == 0;
+                self.flags.negative = (value >> 15) == 1;
+                self.flags.overflow = false;
             }
         }
 
@@ -167,7 +187,10 @@ impl VirtualMachine {
     pub fn print_state(&self) {
         println!("Registers: {:?}", self.registers);
         println!("PC: {}, SP: {}", self.pc, self.sp);
-        println!("Zero Flag: {}", self.zero_flag);
+        println!(
+            "Flags: zero - {}, negative - {}, overflow - {}",
+            self.flags.zero, self.flags.negative, self.flags.overflow
+        );
     }
 }
 
@@ -272,7 +295,7 @@ mod tests {
 
         assert_eq!(vm.registers[1], 0);
         assert_eq!(vm.registers[2], 5); // old value is still here
-        assert!(vm.zero_flag);
+        assert!(vm.flags.zero);
     }
 
     #[test]
@@ -287,7 +310,7 @@ mod tests {
     fn test_jeq_instruction() {
         let mut vm = VirtualMachine::new(1024);
 
-        vm.zero_flag = true;
+        vm.flags.zero = true;
 
         // zero flag is true, and we try Jeq to addr '12'
         vm.execute_instruction(Instruction::Jeq(12)).unwrap();
@@ -397,5 +420,21 @@ mod tests {
         vm.execute_instruction(Instruction::Not(Register::R1))
             .unwrap();
         assert_eq!(vm.registers[1], 65527);
+    }
+
+    #[test]
+    fn test_negative_flag() {
+        let mut vm = VirtualMachine::new(1024);
+        vm.execute_instruction(Instruction::Set(Register::R1, 5))
+            .unwrap();
+        vm.execute_instruction(Instruction::Set(Register::R2, 10))
+            .unwrap();
+
+        // 5 - 10 = -5
+        vm.execute_instruction(Instruction::Sub(Register::R1, Register::R2))
+            .unwrap();
+
+        assert!(vm.flags.negative);
+        assert!(!vm.flags.zero);
     }
 }
