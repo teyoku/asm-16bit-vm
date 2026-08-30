@@ -87,7 +87,9 @@ pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
             }
         } else {
             match data[0] {
-                "HALT" | "ADD" | "SUB" | "PUSH" | "POP" | "RET" => current_address += 1,
+                "HALT" | "ADD" | "SUB" | "PUSH" | "POP" | "RET" | "AND" | "OR" | "XOR" | "NOT" => {
+                    current_address += 1
+                }
                 "SET" | "LOAD" | "STORE" | "JMP" | "JEQ" | "JNE" | "CALL" => current_address += 2,
                 _ => (),
             }
@@ -160,6 +162,22 @@ pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
                 program.push(Instruction::Call(address));
             }
             "RET" => program.push(Instruction::Ret),
+            "AND" => {
+                let (reg1, reg2) = parse_two_regs(&data)?;
+                program.push(Instruction::And(reg1, reg2));
+            }
+            "OR" => {
+                let (reg1, reg2) = parse_two_regs(&data)?;
+                program.push(Instruction::Or(reg1, reg2));
+            }
+            "XOR" => {
+                let (reg1, reg2) = parse_two_regs(&data)?;
+                program.push(Instruction::Xor(reg1, reg2));
+            }
+            "NOT" => {
+                let reg = parse_single_reg(&data)?;
+                program.push(Instruction::Not(reg));
+            }
             instruction => return Err(AssemblerError::UnknownInstruction(instruction.to_string())),
         }
     }
