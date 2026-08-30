@@ -29,15 +29,15 @@ impl Register {
     }
 }
 
-impl TryFrom<u16> for Register {
+impl TryFrom<&str> for Register {
     type Error = AssemblerError;
 
-    fn try_from(value: u16) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(Register::R0),
-            1 => Ok(Register::R1),
-            2 => Ok(Register::R2),
-            3 => Ok(Register::R3),
+            "R0" => Ok(Register::R0),
+            "R1" => Ok(Register::R1),
+            "R2" => Ok(Register::R2),
+            "R3" => Ok(Register::R3),
             _ => Err(AssemblerError::InvalidRegister(value.to_string())),
         }
     }
