@@ -1,5 +1,3 @@
-pub mod memory;
-pub mod parser;
 use std::{env, error::Error, fs};
 
 use crate::{
@@ -10,7 +8,10 @@ use crate::{
 
 pub mod assembler;
 pub mod error;
+pub mod flags;
 pub mod instruction;
+pub mod memory;
+pub mod parser;
 pub mod register;
 pub mod vm;
 
