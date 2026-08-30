@@ -90,6 +90,29 @@ impl VirtualMachine {
                 self.pc = ret_addr;
                 self.sp += 1;
             }
+            Instruction::And(register1, register2) => {
+                let value =
+                    self.registers[register1.as_index()] & self.registers[register2.as_index()];
+                self.registers[register1.as_index()] = value;
+                self.zero_flag = value == 0
+            }
+            Instruction::Or(register1, register2) => {
+                let value =
+                    self.registers[register1.as_index()] | self.registers[register2.as_index()];
+                self.registers[register1.as_index()] = value;
+                self.zero_flag = value == 0
+            }
+            Instruction::Xor(register1, register2) => {
+                let value =
+                    self.registers[register1.as_index()] ^ self.registers[register2.as_index()];
+                self.registers[register1.as_index()] = value;
+                self.zero_flag = value == 0
+            }
+            Instruction::Not(register) => {
+                let value = !self.registers[register.as_index()];
+                self.registers[register.as_index()] = value;
+                self.zero_flag = value == 0
+            }
         }
 
         Ok(())
@@ -134,6 +157,10 @@ impl VirtualMachine {
             Opcode::Pop => Ok(Instruction::Pop(extract_reg(10)?)),
             Opcode::Call => Ok(Instruction::Call(self.next_word()?)),
             Opcode::Ret => Ok(Instruction::Ret),
+            Opcode::And => Ok(Instruction::And(extract_reg(10)?, extract_reg(8)?)),
+            Opcode::Or => Ok(Instruction::Or(extract_reg(10)?, extract_reg(8)?)),
+            Opcode::Xor => Ok(Instruction::Xor(extract_reg(10)?, extract_reg(8)?)),
+            Opcode::Not => Ok(Instruction::Not(extract_reg(10)?)),
         }
     }
 
@@ -349,5 +376,26 @@ mod tests {
             parse(code),
             Err(AssemblerError::InvalidRegister(_))
         ));
+    }
+
+    #[test]
+    fn test_bitwise_operations() {
+        let mut vm = VirtualMachine::new(1024);
+
+        // R1 = 0b1100 (12), R2 = 0b1010 (10)
+        vm.execute_instruction(Instruction::Set(Register::R1, 12))
+            .unwrap();
+        vm.execute_instruction(Instruction::Set(Register::R2, 10))
+            .unwrap();
+
+        // R1 = 12 & 10 = 0b1000 (8)
+        vm.execute_instruction(Instruction::And(Register::R1, Register::R2))
+            .unwrap();
+        assert_eq!(vm.registers[1], 8);
+
+        // NOT 8 (0000_0000_0000_1000 -> 1111_1111_1111_0111 (65527))
+        vm.execute_instruction(Instruction::Not(Register::R1))
+            .unwrap();
+        assert_eq!(vm.registers[1], 65527);
     }
 }
