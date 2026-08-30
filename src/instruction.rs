@@ -11,6 +11,8 @@ pub enum Instruction {
     Jmp(u16),
     Jeq(u16),
     Jne(u16),
+    Jgt(u16),
+    Jlt(u16),
     Push(Register),
     Pop(Register),
     Call(u16),
@@ -59,6 +61,14 @@ impl Instruction {
             }
             Instruction::Jne(address) => {
                 bytecode.push((Opcode::Jne as u16) << 12);
+                bytecode.push(*address);
+            }
+            Instruction::Jgt(address) => {
+                bytecode.push((Opcode::Jgt as u16) << 12);
+                bytecode.push(*address);
+            }
+            Instruction::Jlt(address) => {
+                bytecode.push((Opcode::Jlt as u16) << 12);
                 bytecode.push(*address);
             }
             Instruction::Push(register) => {
@@ -114,14 +124,16 @@ pub enum Opcode {
     Jmp = 6,
     Jeq = 7,
     Jne = 8,
-    Push = 9,
-    Pop = 10,
-    Call = 11,
-    Ret = 12,
-    And = 13,
-    Or = 14,
-    Xor = 15,
-    Not = 16,
+    Jgt = 9,
+    Jlt = 10,
+    Push = 11,
+    Pop = 12,
+    Call = 13,
+    Ret = 14,
+    And = 15,
+    Or = 16,
+    Xor = 17,
+    Not = 18,
 }
 
 impl TryFrom<u16> for Opcode {
@@ -138,14 +150,16 @@ impl TryFrom<u16> for Opcode {
             6 => Ok(Opcode::Jmp),
             7 => Ok(Opcode::Jeq),
             8 => Ok(Opcode::Jne),
-            9 => Ok(Opcode::Push),
-            10 => Ok(Opcode::Pop),
-            11 => Ok(Opcode::Call),
-            12 => Ok(Opcode::Ret),
-            13 => Ok(Opcode::And),
-            14 => Ok(Opcode::Or),
-            15 => Ok(Opcode::Xor),
-            16 => Ok(Opcode::Not),
+            9 => Ok(Opcode::Jgt),
+            10 => Ok(Opcode::Jlt),
+            11 => Ok(Opcode::Push),
+            12 => Ok(Opcode::Pop),
+            13 => Ok(Opcode::Call),
+            14 => Ok(Opcode::Ret),
+            15 => Ok(Opcode::And),
+            16 => Ok(Opcode::Or),
+            17 => Ok(Opcode::Xor),
+            18 => Ok(Opcode::Not),
             _ => Err(RuntimeError::InvalidOpcode(value)),
         }
     }
