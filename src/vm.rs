@@ -1,9 +1,16 @@
+pub mod flags;
+pub mod instruction;
+pub mod memory;
+pub mod register;
+
 use crate::{
     error::RuntimeError,
-    flags::Flags,
-    instruction::{Instruction, Opcode},
-    memory::Memory,
-    register::Register,
+    vm::{
+        flags::Flags,
+        instruction::{Instruction, Opcode},
+        memory::Memory,
+        register::Register,
+    },
 };
 
 pub struct VirtualMachine {

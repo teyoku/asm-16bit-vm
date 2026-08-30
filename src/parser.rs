@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{error::AssemblerError, instruction::Instruction, register::Register};
+use crate::{
+    error::AssemblerError,
+    vm::{instruction::Instruction, register::Register},
+};
 
 pub fn parse_u16(s: &str) -> Result<u16, AssemblerError> {
     if s.starts_with("0x") {

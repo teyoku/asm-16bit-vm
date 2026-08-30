@@ -8,11 +8,7 @@ use crate::{
 
 pub mod assembler;
 pub mod error;
-pub mod flags;
-pub mod instruction;
-pub mod memory;
 pub mod parser;
-pub mod register;
 pub mod vm;
 
 fn main() -> Result<(), Box<dyn Error>> {

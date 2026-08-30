@@ -1,4 +1,4 @@
-use crate::instruction::Instruction;
+use crate::vm::instruction::Instruction;
 
 pub fn assemble(program: &[Instruction]) -> Vec<u16> {
     program

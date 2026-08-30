@@ -1,4 +1,4 @@
-use crate::{error::RuntimeError, register::Register};
+use crate::{error::RuntimeError, vm::register::Register};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Instruction {
