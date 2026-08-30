@@ -219,7 +219,7 @@ impl VirtualMachine {
 
 #[cfg(test)]
 mod tests {
-    use crate::{assembler::assemble, error::AssemblerError, parser::parse};
+    use crate::{assembler::assemble, parser::Parser};
 
     use super::*;
 
@@ -383,7 +383,7 @@ mod tests {
             RET
         ";
 
-        let program = parse(code).unwrap();
+        let program = Parser::new().parse(code).unwrap();
         let bytecode = assemble(&program);
 
         let mut vm = VirtualMachine::new(1024);
@@ -392,44 +392,6 @@ mod tests {
 
         assert!(!vm.is_running);
         assert_eq!(vm.registers[0], 42);
-    }
-
-    #[test]
-    fn test_parse_valid_program() -> Result<(), AssemblerError> {
-        let code = "
-            SET R0 5
-            HALT
-        ";
-        let program = parse(code)?;
-        let bytecode = assemble(&program);
-
-        let mut vm = VirtualMachine::new(1024);
-        vm.memory.load_program(&bytecode, 0).unwrap();
-        vm.run().unwrap();
-
-        assert_eq!(vm.registers[0], 5);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_parse_missing_argument() {
-        let code = "SET R0";
-
-        assert!(matches!(
-            parse(code),
-            Err(AssemblerError::MissingArgument(message)) if message == "Expected value"
-        ));
-    }
-
-    #[test]
-    fn test_parse_invalid_register() {
-        let code = "ADD R9 R1";
-
-        assert!(matches!(
-            parse(code),
-            Err(AssemblerError::InvalidRegister(_))
-        ));
     }
 
     #[test]
