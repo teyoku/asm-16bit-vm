@@ -5,7 +5,7 @@ use crate::{
     vm::{instruction::Instruction, register::Register},
 };
 
-pub fn parse_u16(s: &str) -> Result<u16, AssemblerError> {
+fn parse_u16(s: &str) -> Result<u16, AssemblerError> {
     if s.starts_with("0x") {
         u16::from_str_radix(&s[2..], 16).map_err(|_| AssemblerError::ParseIntError(s.to_string()))
     } else {
@@ -14,57 +14,49 @@ pub fn parse_u16(s: &str) -> Result<u16, AssemblerError> {
     }
 }
 
-fn parse_reg_and_u16(
-    data: &[&str],
-    labels: &HashMap<String, u16>,
-) -> Result<(Register, u16), AssemblerError> {
-    let &reg_str = data.get(1).ok_or(AssemblerError::MissingArgument(
-        "Expected register".to_string(),
-    ))?;
-    let reg = reg_str.try_into()?;
-
-    let value_str = data.get(2).ok_or(AssemblerError::MissingArgument(
-        "Expected value".to_string(),
-    ))?;
-    let value = parse_address_or_label(value_str, labels)?;
-
-    Ok((reg, value))
-}
-
-fn parse_two_regs(data: &[&str]) -> Result<(Register, Register), AssemblerError> {
-    let &reg1_str = data.get(1).ok_or(AssemblerError::MissingArgument(
-        "Expected register".to_string(),
-    ))?;
-    let reg1 = reg1_str.try_into()?;
-
-    let &reg2_str = data.get(2).ok_or(AssemblerError::MissingArgument(
-        "Expected register".to_string(),
-    ))?;
-    let reg2 = reg2_str.try_into()?;
-
-    Ok((reg1, reg2))
-}
-
-fn parse_single_u16(data: &[&str], labels: &HashMap<String, u16>) -> Result<u16, AssemblerError> {
-    let address = data.get(1).ok_or(AssemblerError::MissingArgument(
-        "Expected address".to_string(),
-    ))?;
-    parse_address_or_label(address, labels)
-}
-
-fn parse_single_reg(data: &[&str]) -> Result<Register, AssemblerError> {
-    let &reg_str = data.get(1).ok_or(AssemblerError::MissingArgument(
-        "Expected register".to_string(),
-    ))?;
-    reg_str.try_into()
-}
-
 fn parse_address_or_label(s: &str, labels: &HashMap<String, u16>) -> Result<u16, AssemblerError> {
     if let Some(&addr) = labels.get(s) {
         return Ok(addr);
     }
 
     parse_u16(s).map_err(|_| AssemblerError::UnknownLabel(s.to_string()))
+}
+
+pub fn get_arg<'a>(
+    data: &[&'a str],
+    index: usize,
+    eror_msg: &str,
+) -> Result<&'a str, AssemblerError> {
+    data.get(index)
+        .copied()
+        .ok_or_else(|| AssemblerError::MissingArgument(eror_msg.to_string()))
+}
+
+fn parse_reg_and_u16(
+    data: &[&str],
+    labels: &HashMap<String, u16>,
+) -> Result<(Register, u16), AssemblerError> {
+    let reg = get_arg(data, 1, "Expected register")?.try_into()?;
+    let value_str = get_arg(data, 2, "Expected value")?;
+    let value = parse_address_or_label(value_str, labels)?;
+
+    Ok((reg, value))
+}
+
+fn parse_two_regs(data: &[&str]) -> Result<(Register, Register), AssemblerError> {
+    let reg1 = get_arg(data, 1, "Expected first register")?.try_into()?;
+    let reg2 = get_arg(data, 2, "Expected second register")?.try_into()?;
+
+    Ok((reg1, reg2))
+}
+
+fn parse_single_u16(data: &[&str], labels: &HashMap<String, u16>) -> Result<u16, AssemblerError> {
+    let address = get_arg(data, 1, "Expected address")?;
+    parse_address_or_label(address, labels)
+}
+
+fn parse_single_reg(data: &[&str]) -> Result<Register, AssemblerError> {
+    get_arg(data, 1, "Expected register")?.try_into()
 }
 
 pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
