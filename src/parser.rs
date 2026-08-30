@@ -90,7 +90,9 @@ pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
                 "HALT" | "ADD" | "SUB" | "PUSH" | "POP" | "RET" | "AND" | "OR" | "XOR" | "NOT" => {
                     current_address += 1
                 }
-                "SET" | "LOAD" | "STORE" | "JMP" | "JEQ" | "JNE" | "CALL" => current_address += 2,
+                "SET" | "LOAD" | "STORE" | "JMP" | "JEQ" | "JNE" | "JGT" | "JLT" | "CALL" => {
+                    current_address += 2
+                }
                 _ => (),
             }
         }
@@ -148,6 +150,14 @@ pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
             "JNE" => {
                 let address = parse_single_u16(&data, &labels)?;
                 program.push(Instruction::Jne(address));
+            }
+            "JGT" => {
+                let address = parse_single_u16(&data, &labels)?;
+                program.push(Instruction::Jgt(address));
+            }
+            "JLT" => {
+                let address = parse_single_u16(&data, &labels)?;
+                program.push(Instruction::Jlt(address));
             }
             "PUSH" => {
                 let reg = parse_single_reg(&data)?;
