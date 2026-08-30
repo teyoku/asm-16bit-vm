@@ -10,12 +10,9 @@ pub fn parse_u16(s: &str) -> Result<u16, AssemblerError> {
 }
 
 fn parse_reg_and_u16(data: &[&str]) -> Result<(Register, u16), AssemblerError> {
-    let reg_str = data
-        .get(1)
-        .ok_or(AssemblerError::MissingArgument(
-            "Expected register".to_string(),
-        ))?
-        .to_owned();
+    let &reg_str = data.get(1).ok_or(AssemblerError::MissingArgument(
+        "Expected register".to_string(),
+    ))?;
     let reg = reg_str.try_into()?;
 
     let value_str = data.get(2).ok_or(AssemblerError::MissingArgument(
@@ -27,20 +24,14 @@ fn parse_reg_and_u16(data: &[&str]) -> Result<(Register, u16), AssemblerError> {
 }
 
 fn parse_two_regs(data: &[&str]) -> Result<(Register, Register), AssemblerError> {
-    let reg1_str = data
-        .get(1)
-        .ok_or(AssemblerError::MissingArgument(
-            "Expected register".to_string(),
-        ))?
-        .to_owned();
+    let &reg1_str = data.get(1).ok_or(AssemblerError::MissingArgument(
+        "Expected register".to_string(),
+    ))?;
     let reg1 = reg1_str.try_into()?;
 
-    let reg2_str = data
-        .get(2)
-        .ok_or(AssemblerError::MissingArgument(
-            "Expected register".to_string(),
-        ))?
-        .to_owned();
+    let &reg2_str = data.get(2).ok_or(AssemblerError::MissingArgument(
+        "Expected register".to_string(),
+    ))?;
     let reg2 = reg2_str.try_into()?;
 
     Ok((reg1, reg2))
@@ -54,12 +45,9 @@ fn parse_single_u16(data: &[&str]) -> Result<u16, AssemblerError> {
 }
 
 fn parse_single_reg(data: &[&str]) -> Result<Register, AssemblerError> {
-    let reg_str = data
-        .get(1)
-        .ok_or(AssemblerError::MissingArgument(
-            "Expected register".to_string(),
-        ))?
-        .to_owned();
+    let &reg_str = data.get(1).ok_or(AssemblerError::MissingArgument(
+        "Expected register".to_string(),
+    ))?;
     reg_str.try_into()
 }
 
