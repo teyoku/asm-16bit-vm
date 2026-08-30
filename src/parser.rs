@@ -11,8 +11,12 @@ fn parse_register(s: &str) -> Result<Register, AssemblerError> {
 }
 
 pub fn parse_u16(s: &str) -> Result<u16, AssemblerError> {
-    s.parse::<u16>()
-        .map_err(|_| AssemblerError::ParseIntError(s.to_string()))
+    if s.starts_with("0x") {
+        u16::from_str_radix(&s[2..], 16).map_err(|_| AssemblerError::ParseIntError(s.to_string()))
+    } else {
+        s.parse::<u16>()
+            .map_err(|_| AssemblerError::ParseIntError(s.to_string()))
+    }
 }
 
 fn parse_reg_and_u16(data: &[&str]) -> Result<(Register, u16), AssemblerError> {
@@ -61,7 +65,14 @@ pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
     let mut program = Vec::new();
 
     for line in code.lines() {
-        let data: Vec<&str> = line.split_whitespace().collect();
+        // Handling comments
+        let fixed_line = if let Some((part, _)) = line.split_once(';') {
+            part
+        } else {
+            line
+        };
+
+        let data: Vec<&str> = fixed_line.split_whitespace().collect();
         if data.is_empty() {
             continue;
         }
@@ -118,4 +129,27 @@ pub fn parse(code: &str) -> Result<Vec<Instruction>, AssemblerError> {
     }
 
     Ok(program)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_u16() {
+        assert_eq!(parse_u16("1024").unwrap(), 1024);
+        assert_eq!(parse_u16("0x0A").unwrap(), 10);
+        assert!(matches!(
+            parse_u16("hello!"),
+            Err(AssemblerError::ParseIntError(_)),
+        ));
+    }
+
+    #[test]
+    fn test_parse_comment() {
+        assert_eq!(
+            parse("ADD R0 R1 ; don't touch this!").unwrap(),
+            vec![Instruction::Add(Register::R0, Register::R1)]
+        );
+    }
 }
