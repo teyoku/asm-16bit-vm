@@ -1,6 +1,6 @@
 use crate::{error::RuntimeError, register::Register};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Instruction {
     Halt,
     Set(Register, u16),
