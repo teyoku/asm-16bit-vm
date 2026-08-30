@@ -62,13 +62,27 @@ impl VirtualMachine {
             }
             Instruction::Jmp(address) => self.pc = address,
             Instruction::Jeq(address) => {
+                // == 0
                 if self.flags.zero {
                     self.pc = address
                 }
             }
             Instruction::Jne(address) => {
+                // != 0
                 if !self.flags.zero {
                     self.pc = address
+                }
+            }
+            Instruction::Jgt(address) => {
+                // > 0
+                if !self.flags.zero && !self.flags.negative {
+                    self.pc = address;
+                }
+            }
+            Instruction::Jlt(address) => {
+                // < 0
+                if self.flags.negative {
+                    self.pc = address;
                 }
             }
             Instruction::Push(register) => {
@@ -173,6 +187,8 @@ impl VirtualMachine {
             Opcode::Jmp => Ok(Instruction::Jmp(self.next_word()?)),
             Opcode::Jeq => Ok(Instruction::Jeq(self.next_word()?)),
             Opcode::Jne => Ok(Instruction::Jne(self.next_word()?)),
+            Opcode::Jgt => Ok(Instruction::Jgt(self.next_word()?)),
+            Opcode::Jlt => Ok(Instruction::Jlt(self.next_word()?)),
             Opcode::Push => Ok(Instruction::Push(extract_reg(10)?)),
             Opcode::Pop => Ok(Instruction::Pop(extract_reg(10)?)),
             Opcode::Call => Ok(Instruction::Call(self.next_word()?)),
@@ -352,10 +368,18 @@ mod tests {
 
     #[test]
     fn test_call_ret() {
+        let code = "
+            CALL my_func
+            HALT
+        my_func:
+            SET R0 42
+            RET
+        ";
+
+        let program = parse(code).unwrap();
+        let bytecode = assemble(&program);
+
         let mut vm = VirtualMachine::new(1024);
-
-        let bytecode: Vec<u16> = vec![0xB000, 0x0004, 0x0000, 0x0000, 0x1000, 0x002A, 0xC000];
-
         vm.memory.load_program(&bytecode, 0).unwrap();
         vm.run().unwrap();
 
@@ -436,5 +460,23 @@ mod tests {
 
         assert!(vm.flags.negative);
         assert!(!vm.flags.zero);
+    }
+
+    #[test]
+    fn test_jlt_instruction() {
+        let mut vm = VirtualMachine::new(1024);
+
+        vm.execute_instruction(Instruction::Set(Register::R1, 5))
+            .unwrap();
+        vm.execute_instruction(Instruction::Set(Register::R2, 10))
+            .unwrap();
+
+        // 5 - 10 = -5
+        vm.execute_instruction(Instruction::Sub(Register::R1, Register::R2))
+            .unwrap();
+
+        vm.execute_instruction(Instruction::Jlt(500)).unwrap();
+
+        assert_eq!(vm.pc, 500);
     }
 }
